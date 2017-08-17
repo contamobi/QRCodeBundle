@@ -17,7 +17,7 @@ class QRcodeService extends \Cmobi\QRCodeBundle\Lib\phpqrcode\QRcode implements 
     private $findFromRandom;
     private $defaultMask;
     private $pngMaximumSize;
-    
+
     /**
      * {@inheritdoc}
      */
@@ -26,21 +26,21 @@ class QRcodeService extends \Cmobi\QRCodeBundle\Lib\phpqrcode\QRcode implements 
         $this->container = $container;
         $this->readConfiguration();
     }
-    
+
     private function readConfiguration()
     {
         $options = $this->container->getParameter('bushidoio_qrcode');
-        
+
         $this->cacheable = $options['cacheable'];
         $this->cacheDir = $options['cache_dir'];
-        
+
         if (empty($this->cacheDir)) {
             $this->cacheDir = $this->container->getParameter("kernel.cache_dir") . DIRECTORY_SEPARATOR . 'qrcodes' . DIRECTORY_SEPARATOR;
         }
         if(!file_exists($this->cacheDir)){
             mkdir($this->cacheDir, 0777, true);
         }
-        
+
         $this->logsDir = $options['logs_dir'];
         if (empty($this->logsDir)) {
             $this->logDir = $this->container->getParameter("kernel.logs_dir") . DIRECTORY_SEPARATOR . 'qrcodes' . DIRECTORY_SEPARATOR;
@@ -48,12 +48,12 @@ class QRcodeService extends \Cmobi\QRCodeBundle\Lib\phpqrcode\QRcode implements 
         if(!file_exists($this->logDir)){
             mkdir($this->logDir, 0777, true);
         }
-        
+
         $this->findBestMask = $options['find_best_mask'];
         $this->findFromRandom = $options['find_from_random'];
         $this->defaultMask = $options['default_mask'];
         $this->pngMaximumSize = $options['png_maximum_size'];
-        
+
         // Use cache - more disk reads but less CPU power, masks and format
         // templates are stored there
         define('QR_CACHEABLE', $this->cacheable);
@@ -76,39 +76,39 @@ class QRcodeService extends \Cmobi\QRCodeBundle\Lib\phpqrcode\QRcode implements 
         // PHP can handle such big images
         define('QR_PNG_MAXIMUM_SIZE', $this->pngMaximumSize);
     }
-    
+
     public function getQRCode($text, $size = 3, $format = 'png')
     {
         $result = array();
-        
+
         $options = array(
             'size' => $size,
             'format' => $format,
         );
         $fileName = $this->createFileName($text, $options);
         $path = $this->getPath($text, $size, $format);
-        
+
         $result['fileName'] = $fileName;
         $result['filePath'] = $path;
-        
+
         return $result;
     }
-    
+
     public function getQRCodeBase64($text, $size = 3, $format = 'png')
     {
         $content = "";
-        
+
         $path = $this->getPath($text, $size, $format);
-        
+
         try {
             $content = file_get_contents($path);
         } catch (\Exception $e) {
             throw new NotFoundHttpException();
         }
-        
+
         return base64_encode($content);
     }
-    
+
     private function getPath($text, $size, $format)
     {
         $options = array(
@@ -116,19 +116,19 @@ class QRcodeService extends \Cmobi\QRCodeBundle\Lib\phpqrcode\QRcode implements 
             'format' => $format
         );
         $path = $this->cacheDir . $this->createFileName($text, $options);
-        
+
         if (!file_exists($path)){
             $this->png($text, $path, QR_ECLEVEL_L, $size);
         }
-        
+
         return $path;
     }
-    
+
     private function createFileName($text, $options)
     {
         $size = $options['size'];
         $format = $options['format'];
-        
-        return urlencode($text . "_$size.$format");
+
+        return urlencode(microtime($text) . "_$size.$format");
     }
 }
